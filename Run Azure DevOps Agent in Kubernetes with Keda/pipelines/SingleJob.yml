@@ -1,0 +1,15 @@
+ trigger: none
+
+ pool: AgentInContainer
+
+ variables:
+   buildConfiguration: 'Release'
+   
+ jobs:
+ - job: job1
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: ''
+     displayName: Check if job is running

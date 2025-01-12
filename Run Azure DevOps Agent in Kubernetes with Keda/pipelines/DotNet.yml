@@ -1,0 +1,21 @@
+ trigger: none
+
+ pool: AgentInContainer
+
+ variables:
+   buildConfiguration: 'Release'
+   
+ jobs:
+ - job: job1
+   steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET Core SDK'
+      inputs:
+        version: 9.x
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+      displayName: 'Build .NET Solution'

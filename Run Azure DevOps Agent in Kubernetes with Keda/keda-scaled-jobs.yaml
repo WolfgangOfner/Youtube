@@ -1,0 +1,35 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: ado-scaledjob
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        containers:
+        - name: ado-agent-job
+          image: wolfgangofner/adoagent # replace with your value
+          imagePullPolicy: Always
+          env:
+          - name: AZP_URL
+            value: https://dev.azure.com/programmingwithwolfgang # replace with your value
+          - name: AZP_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ado-agent-secret
+                key: AZP_TOKEN
+          - name: AZP_POOL
+            value: AgentInContainer # replace with your value
+          securityContext:
+            privileged: true
+  pollingInterval: 10
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  maxReplicaCount: 10  
+  triggers:
+  - type: azure-pipelines
+    metadata:
+      poolName: AgentInContainer
+      organizationURLFromEnv: "AZP_URL"
+      personalAccessTokenFromEnv: "AZP_TOKEN"
+      activationTargetPipelinesQueueLength: "0"

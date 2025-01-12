@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ado-agent-secret
+data:
+  AZP_TOKEN: <Your_PAT> # replace with your value / (base64 encoded)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ado-agent-deployment
+  labels:
+    app: ado-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ado-agent
+  template:
+    metadata:
+      labels:
+        app: ado-agent
+    spec:
+      containers:
+      - name: ado-agent
+        image: wolfgangofner/adoagent # replace with your value
+        env:
+          - name: AZP_URL
+            value: https://dev.azure.com/programmingwithwolfgang # replace with your value
+          - name: AZP_POOL
+            value: AgentInContainer # replace with your value
+          - name: AZP_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ado-agent-secret
+                key: AZP_TOKEN
+        # securityContext:
+        #   privileged: true
