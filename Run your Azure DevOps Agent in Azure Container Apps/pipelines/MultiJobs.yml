@@ -1,0 +1,47 @@
+ trigger: none
+
+ pool: AgentInContainer
+
+ variables:
+   buildConfiguration: 'Release'
+   
+ jobs:
+ - job: job1
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'sleep 5m'
+     displayName: Wait for 5 minutes
+
+ - job: job2
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'sleep 5m'
+     displayName: Wait for 5 minutes
+
+ - job: job3
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'sleep 5m'
+     displayName: Wait for 5 minutes
+   
+ - job: job4
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'sleep 5m'
+     displayName: Wait for 5 minutes
+
+ - job: job5
+   steps:
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'sleep 5m'
+     displayName: Wait for 5 minutes
