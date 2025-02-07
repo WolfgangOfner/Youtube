@@ -1,0 +1,27 @@
+{
+  "vmss": {
+    "sku": {
+      "name": "Standard_D2as_v5"
+    },
+    "images": [
+      {
+        "aliases": [
+          "ubuntu-22.04"
+        ],
+        "buffer": "*",
+        "wellKnownImageName": "ubuntu-22.04/latest"
+      }
+    ],
+    "osProfile": {
+      "secretsManagementSettings": {
+        "observedCertificates": [],
+        "keyExportable": false
+      },
+      "logonType": "Service"
+    },
+    "storageProfile": {
+      "osDiskStorageAccountType": "Standard",
+      "dataDisks": []
+    }
+  }
+}

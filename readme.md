@@ -4,4 +4,4 @@ This repository contains the code for all the demos from my [YouTube channel](ht
 
 If you enjoy my videos, please leave a like or comment. If you have any feedback, feel free to share it in the comments.
 
-<img src="./readme/Logo.png" alt="Programming with Wolfgang Logo" width="600"/>
+<img src="./readme/Logo.png" alt="Programming with Wolfgang Logo" width="1000"/>
