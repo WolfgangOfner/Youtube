@@ -1,0 +1,15 @@
+ trigger: none
+
+ pool: AgentInContainer
+
+ variables:
+   buildConfiguration: 'Release'
+   
+ jobs:
+ - job: script
+   steps:     
+   - task: Bash@3
+     inputs:
+       targetType: 'inline'
+       script: 'echo "This is a sample file" > /share/sample.txt'
+     displayName: "Create a new file in the shared folder"
