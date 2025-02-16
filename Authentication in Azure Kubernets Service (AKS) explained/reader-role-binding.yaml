@@ -1,0 +1,13 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: reader-user-binding
+  namespace: read
+subjects:
+  - kind: Group
+    name: 24975d09-19e9-47a5-aa3b-e952c693c016 # Entra ID group ID    
+    namespace: read
+roleRef:
+  kind: Role # use ClusterRole if permission is for the entire cluster
+  name: reader
+  apiGroup: rbac.authorization.k8s.io
