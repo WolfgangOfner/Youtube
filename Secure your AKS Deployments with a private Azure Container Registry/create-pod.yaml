@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-registry
+spec:
+  containers:
+  - name: private-registry-container
+    image: privateakswolfgang.azurecr.io/nginx # update name of your acr
+    imagePullPolicy: Always
+  imagePullSecrets:
+  - name: tokensecret
