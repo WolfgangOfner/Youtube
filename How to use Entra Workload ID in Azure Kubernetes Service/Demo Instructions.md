@@ -138,16 +138,3 @@ $podWorkloadIdentitiy | kubectl apply -f -
 kubectl get pods
 kubectl logs workload-identity-test
 ```
-
-
-Using the Azure Key Vault provider for Secrets Store CSI Driver in an Azure Kubernetes Service (AKS) offers several advantages over accessing the Key Vault directly from within your application:
-
-Simplified Secret Management: The Secrets Store CSI Driver allows you to mount secrets, keys, and certificates directly into your pods as volumes. This simplifies the management of sensitive data by abstracting the complexity of accessing and handling secrets within your application code1.
-
-Enhanced Security: By using the CSI Driver, secrets are managed at the infrastructure level, reducing the risk of exposing sensitive data in your application code. The secrets are mounted directly into the pod's file system, ensuring they are only accessible to the specific pod1.
-
-Automatic Synchronization: The CSI Driver supports automatic synchronization with Kubernetes secrets. This means any updates to the secrets in Azure Key Vault are automatically reflected in the Kubernetes secrets, ensuring your application always has the latest secret values without requiring manual intervention1.
-
-Pod Portability: The SecretProviderClass Custom Resource Definition (CRD) supports pod portability, allowing you to define how secrets are fetched and mounted in a declarative manner. This makes it easier to manage secrets across different environments and clusters1.
-
-Auto-Rotation of Secrets: The CSI Driver supports the auto-rotation of secrets, ensuring that your application always uses the most up-to-date secrets without requiring restarts or redeployments1.
