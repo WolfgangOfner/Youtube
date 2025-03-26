@@ -1,0 +1,16 @@
+ trigger: none
+
+ pool: Windows-MDP
+
+ variables:
+   buildConfiguration: 'Release'
+   
+ jobs:
+ - job: Build
+   steps:
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+      displayName: 'Build .NET Solution'

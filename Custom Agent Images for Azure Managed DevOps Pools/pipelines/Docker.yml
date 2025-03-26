@@ -1,0 +1,22 @@
+trigger: none
+
+resources:
+- repo: self
+
+pool: Ubuntu-Mdp
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+
+    steps:
+    - task: Docker@2
+      displayName: Build image
+      inputs:
+        command: 'build'
+        Dockerfile: '**/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)/MdpCustomImageDemo'
+        tags: '$(Build.BuildId)'
