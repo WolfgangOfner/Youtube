@@ -11,6 +11,6 @@
     - task: DotNetCoreCLI@2
       inputs:
         command: 'build'
-        projects: '**/*.csproj'
+        projects: '$(Build.SourcesDirectory)/Custom Agent Images for Azure Managed DevOps Pools/**/*.csproj'
         arguments: '--configuration $(buildConfiguration)'
       displayName: 'Build .NET Solution'
