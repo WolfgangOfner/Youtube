@@ -20,6 +20,6 @@ stages:
       displayName: Build an image
       inputs:
         command: 'build'
-        Dockerfile: '**/Dockerfile'
+        Dockerfile: '$(Build.SourcesDirectory)/Azure Managed DevOps Pools Explained - A Game Changer for Hosting Agents/DotNetWithDocker/DotNetWithDocker/Dockerfile'
         buildContext: '$(Build.SourcesDirectory)/Azure Managed DevOps Pools Explained - A Game Changer for Hosting Agents/DotNetWithDocker'
         tags: '$(tag)'

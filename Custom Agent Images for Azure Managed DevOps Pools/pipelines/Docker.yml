@@ -17,6 +17,6 @@ stages:
       displayName: Build image
       inputs:
         command: 'build'
-        Dockerfile: '**/Dockerfile'
-        buildContext: '$(Build.SourcesDirectory)/MdpCustomImageDemo'
+        Dockerfile: '$(Build.SourcesDirectory)/Custom Agent Images for Azure Managed DevOps Pools/MdpCustomImageDemo/MdpCustomImageDemo/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)/Custom Agent Images for Azure Managed DevOps Pools/MdpCustomImageDemo'
         tags: '$(Build.BuildId)'
