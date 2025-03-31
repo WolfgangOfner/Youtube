@@ -16,6 +16,6 @@
     - task: DotNetCoreCLI@2
       inputs:
         command: 'build'
-        projects: '**/*.csproj'
+        projects: '$(Build.SourcesDirectory)/Run your Azure DevOps Agent in Kubernetes with Keda/**/*.csproj'
         arguments: '--configuration $(buildConfiguration)'
       displayName: 'Build .NET Solution'

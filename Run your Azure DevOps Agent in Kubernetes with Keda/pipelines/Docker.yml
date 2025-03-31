@@ -20,8 +20,8 @@ stages:
     #   displayName: Build an image
     #   inputs:
     #     command: 'build'
-    #     Dockerfile: '**/Dockerfile'
-    #     buildContext: '$(Build.SourcesDirectory)/AdoAgentAksDemo'
+    #     Dockerfile: '$(Build.SourcesDirectory)/Run your Azure DevOps Agent in Kubernetes with Keda/AdoAgentAksDemo/AdoAgentAksDemo/Dockerfile'
+    #     buildContext: '$(Build.SourcesDirectory)/Run your Azure DevOps Agent in Kubernetes with Keda/AdoAgentAksDemo'
     #     tags: '$(tag)'
 
     - task: Bash@3
@@ -29,4 +29,4 @@ stages:
       inputs:
         targetType: inline
         script: |
-          podman build -f $(Build.SourcesDirectory)/AdoAgentAksDemo/AdoAgentAksDemo/Dockerfile -t adoagentaksdemo:$(tag) $(Build.SourcesDirectory)/AdoAgentAksDemo
+          podman build -f '$(Build.SourcesDirectory)/Run your Azure DevOps Agent in Kubernetes with Keda/AdoAgentAksDemo/AdoAgentAksDemo/Dockerfile' -t adoagentaksdemo:$(tag) '$(Build.SourcesDirectory)/Run your Azure DevOps Agent in Kubernetes with Keda/AdoAgentAksDemo'
