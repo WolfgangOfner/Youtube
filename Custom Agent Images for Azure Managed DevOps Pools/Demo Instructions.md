@@ -13,7 +13,7 @@ $GalleryId=$(`
     az sig create `
     --resource-group $ResourceGroup `
     --gallery-name $Gallery `
-    -query id -o tsv)
+    --query id -o tsv)
 
 $DevOpsInfrastructureId=$(`
     az ad sp list `
