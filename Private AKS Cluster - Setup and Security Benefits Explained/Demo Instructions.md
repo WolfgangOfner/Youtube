@@ -1,7 +1,7 @@
 ## Define Variables 
 ```
-$AksName="public-aks-cluster"
-$ResourceGroupName="public-cluster-rg"
+$AksName="private-aks-cluster"
+$ResourceGroupName="private-cluster-rg"
 $Location="CanadaCentral"
 ```
 
