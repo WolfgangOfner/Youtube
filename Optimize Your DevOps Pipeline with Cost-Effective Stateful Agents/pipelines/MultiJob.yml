@@ -1,0 +1,25 @@
+trigger: none
+
+pool: MDP-Stateful-Demo  
+
+stages:
+- stage: Deploy
+  jobs: 
+  - job: One
+    steps:
+    - checkout: none
+
+    - task: CmdLine@2
+      displayName: 'Do something'
+      inputs:
+        script: 'echo One'
+
+  - job: Two
+    dependsOn: One
+    steps:
+    - checkout: none
+    
+    - task: CmdLine@2
+      displayName: 'Do something again'
+      inputs:
+        script: 'echo Two'

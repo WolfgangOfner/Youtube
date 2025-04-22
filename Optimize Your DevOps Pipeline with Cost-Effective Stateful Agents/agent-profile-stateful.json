@@ -1,0 +1,7 @@
+{
+  "Stateful": 
+  {
+      "maxAgentLifetime": "7.00:00:00",
+      "gracePeriodTimeSpan": "00:05:00"
+  }
+}
