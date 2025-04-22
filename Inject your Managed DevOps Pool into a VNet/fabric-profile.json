@@ -1,0 +1,30 @@
+{
+  "vmss": {
+    "sku": {
+      "name": "Standard_D2as_v5"
+    },
+    "images": [
+      {
+        "aliases": [
+          "ubuntu-22.04"
+        ],
+        "buffer": "*",
+        "wellKnownImageName": "ubuntu-22.04/latest"
+      }
+    ],
+    "networkProfile": {
+      "subnetId": "/subscriptions/<YOUR_SUBSCRIPTION_ID>/resourceGroups/mdp-vnet-demo-rg/providers/Microsoft.Network/virtualNetworks/MyVNet/subnets/mdp-subnet"
+    },
+    "osProfile": {
+      "secretsManagementSettings": {
+        "observedCertificates": [],
+        "keyExportable": false
+      },
+      "logonType": "Service"
+    },
+    "storageProfile": {
+      "osDiskStorageAccountType": "StandardSSD",
+      "dataDisks": []
+    }
+  }
+}
