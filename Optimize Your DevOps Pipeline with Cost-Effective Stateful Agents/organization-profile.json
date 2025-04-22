@@ -2,7 +2,7 @@
   "AzureDevOps": {
     "organizations": [
       {
-        "url": "https://dev.azure.com/ProgrammingWithWolfgang",
+        "url": "https://dev.azure.com/<YOUR_DEVOPS_URL>",
         "projects": [], 
         "parallelism": 1
       }
