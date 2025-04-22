@@ -1,0 +1,14 @@
+{
+  "AzureDevOps": {
+    "organizations": [
+      {
+        "url": "https://dev.azure.com/<YOUR_DEVOPS_URL>",
+        "projects": [], 
+        "parallelism": 1
+      }
+    ],
+    "permissionProfile": {
+       "kind": "CreatorOnly" 
+    }
+  }
+}
