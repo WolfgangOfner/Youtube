@@ -64,13 +64,3 @@ Azure Kubernetes Service Clusters should enable Image Cleaner
 az policy state trigger-scan `
     --resource-group $ResourceGroupName
 ```
-
-Understand Your AKS Spending with the Cost Analysis Add-on
-
-az aks create / update `
-    --resource-group <MyResourceGroup> `
-    --name <MyAksName> `
-    --enable-cost-analysis
-
-AKS must be Standard or Premium Tier
-Must be EA or MCA (Microsoft Customer Agreement)
