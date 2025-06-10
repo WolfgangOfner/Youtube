@@ -4,7 +4,7 @@ metadata:
   name: kubernetesdeploymentdemo
   namespace: default # gitopsdemo
 spec:
-  replicas: 1
+  replicas: 5
   selector:
     matchLabels:
       app: kubernetesdeploymentdemo
@@ -45,7 +45,7 @@ metadata:
   labels:
     name: kubernetesdeploymentdemo
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
   selector:
