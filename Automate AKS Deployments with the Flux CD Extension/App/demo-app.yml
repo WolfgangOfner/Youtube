@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubernetesdeploymentdemo
-  namespace: default # gitopsdemo
+  name: gitops-demo
+  namespace: gitopsdemo # default # gitopsdemo
 spec:
   replicas: 5
   selector:
     matchLabels:
-      app: kubernetesdeploymentdemo
+      app: gitops-demo
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -16,13 +16,13 @@ spec:
   template:
     metadata:
       labels:
-        app: kubernetesdeploymentdemo
+        app: gitops-demo
     spec:
       nodeSelector:
         kubernetes.io/arch: amd64
         kubernetes.io/os: linux
       containers:
-      - name: kubernetesdeploymentdemo
+      - name: gitops-demo
         image: wolfgangofner/kubernetesdeploymentdemo:start
         imagePullPolicy: IfNotPresent
         ports:
@@ -40,13 +40,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubernetesdeploymentdemo
-  namespace: default # gitopsdemo
+  name: gitops-demo
+  namespace: itopsdemo # default # gitopsdemo
   labels:
-    name: kubernetesdeploymentdemo
+    name: gitops-demo
 spec:
   type: LoadBalancer
   ports:
   - port: 80
   selector:
-    app: kubernetesdeploymentdemo
+    app: gitops-demo
