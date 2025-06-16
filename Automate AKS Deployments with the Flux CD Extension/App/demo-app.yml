@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gitops-demo
-  namespace: default # gitopsdemo
+  namespace: gitopsdemo
 spec:
-  replicas: 5
+  replicas: 1
   selector:
     matchLabels:
       app: gitops-demo
@@ -41,7 +41,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gitops-demo
-  namespace: default # gitopsdemo
+  namespace: gitopsdemo
   labels:
     name: gitops-demo
 spec:
