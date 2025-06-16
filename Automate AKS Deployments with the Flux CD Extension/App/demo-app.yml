@@ -4,7 +4,7 @@ metadata:
   name: gitops-demo
   namespace: default # gitopsdemo
 spec:
-  replicas: 1
+  replicas: 5
   selector:
     matchLabels:
       app: gitops-demo
@@ -45,7 +45,7 @@ metadata:
   labels:
     name: gitops-demo
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 80
   selector:
