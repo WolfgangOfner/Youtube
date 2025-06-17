@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: argocd-demo
 spec:
-  replicas: 5
+  replicas: 1
   selector:
     matchLabels:
       app: argocd-demo
@@ -11,7 +11,7 @@ spec:
     rollingUpdate:
       maxSurge: 1
       maxUnavailable: 1
-  minReadySeconds: 1 
+  minReadySeconds: 5 
   template:
     metadata:
       labels:
