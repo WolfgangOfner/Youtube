@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "argocdhelm.fullname" . }}-test-connection"
+  labels:
+    {{- include "argocdhelm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "argocdhelm.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
