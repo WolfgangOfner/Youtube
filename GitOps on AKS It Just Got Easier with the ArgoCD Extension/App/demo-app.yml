@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: argocd-demo
 spec:
-  replicas: 5
+  replicas: 1
   selector:
     matchLabels:
       app: argocd-demo
@@ -43,7 +43,7 @@ metadata:
   labels:
     name: argocd-demo
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 80
   selector:
