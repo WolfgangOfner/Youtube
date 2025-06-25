@@ -5,7 +5,7 @@ $Location="CanadaCentral"
 $SubscriptionId="$(az account show --query id --output tsv)"
 
 $PoolName="MDP-Identity-Demo"
-$DevCenterName="DevOpsPoolDevCenter"
+$DevCenterName="DevOpsPoolDemoDevCenter"
 $DevCenterProject="DevOpsPoolProject"
 
 $MdpIdentity="mdp-identity"
@@ -58,7 +58,7 @@ $DevCenterProjectId=$( `
   --output tsv)
 ```
 
-$MdpIdentityId --> replace in identity.json
+$SubscriptionId --> replace in identity.json
 
 ```
 az mdp pool create `
