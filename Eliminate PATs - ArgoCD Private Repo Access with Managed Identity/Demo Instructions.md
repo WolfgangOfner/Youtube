@@ -94,7 +94,7 @@ az identity federated-credential create `
 ```
 $Password=$(kubectl get secret argocd-initial-admin-secret -o jsonpath="{.data.password}")
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Password))
-3dknAiO3LDWIIhn5
+
 kubectl port-forward service/argocd-server 8080:443
 ```
 Settings --> Repositories --> + Connect Repo --> 
