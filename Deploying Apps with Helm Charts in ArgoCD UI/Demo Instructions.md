@@ -36,7 +36,7 @@ $Password=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath
 
 kubectl port-forward service/argo-cd-argocd-server -n argocd 8080:443
 ```
-peECipI2KmPYdPYj
+
 ## Deploy Helm Charts
 ```
 redis-helm
