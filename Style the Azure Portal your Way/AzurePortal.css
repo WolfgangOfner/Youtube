@@ -1,0 +1,12 @@
+body {
+    --sidebarBackground: #323130 !important;
+    --sidebarText: #f2f2f2 !important;
+
+    --topbarBackground: #1c1c1c !important;
+    --topbarText: #f2f2f2 !important;
+}
+
+/* Ensure the main content area remains light */
+#main-content {
+    background-color: #ffffff !important;
+}
