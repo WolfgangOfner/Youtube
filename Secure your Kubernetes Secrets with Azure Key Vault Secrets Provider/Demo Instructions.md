@@ -176,6 +176,8 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: azure-kv-secret-provider
+  labels:
+    azure.workload.identity/use: "true"
 spec:
   provider: azure
   parameters:
