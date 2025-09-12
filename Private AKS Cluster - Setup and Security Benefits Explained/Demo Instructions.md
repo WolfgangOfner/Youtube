@@ -52,8 +52,8 @@ Check configuration in Azure portal
 az extension add --name aks-preview --upgrade
 
 az aks update  `
-    --resource-group public-cluster-rg `
-    --name public-aks-cluster `
+    --resource-group $ResourceGroupName `
+    --name $AksName `
     --enable-private-cluster
 
 az extension remove --name aks-preview
