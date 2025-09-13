@@ -39,6 +39,15 @@ Disable public network access for ACR
 
 ## Something
 ```
+$AcrTokenPassword=$(`
+    az acr token create `
+    --name $AcrTokenName `
+    --registry $AcrName `
+    --scope  _repositories_pull `
+    --no-passwords false `
+    --query credentials.passwords[0].value `
+    -o tsv)
+
 az aks command invoke `
     --resource-group $ResourceGroupName `
     --name $AksName `
@@ -47,7 +56,7 @@ az aks command invoke `
 az aks command invoke `
     --resource-group $ResourceGroupName `
     --name $AksName `
-    --command "kubectl create secret docker-registry tokensecret --docker-server=$AcrName.azurecr.io --docker-username=$AcrTokenName --docker-password=<YOUR_ACR_TOKEN_PASSWORD> -n acr"
+    --command "kubectl create secret docker-registry tokensecret --docker-server=$AcrName.azurecr.io --docker-username=$AcrTokenName --docker-password=$AcrTokenPassword -n acr"
 
 az aks command invoke `
     --resource-group $ResourceGroupName `
