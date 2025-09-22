@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: managed-ns  # Specifies the namespace
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "250m"      # Requests 0.25 of a CPU core
+            memory: "256Mi"    # Requests 256 MiB of memory
+          limits:
+            cpu: "500m"      # Limits CPU to 0.5 of a core
+            memory: "512Mi"    # Limits memory to 512 MiB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: managed-ns
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
