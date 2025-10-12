@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: whoami
+spec:
+  containers:
+  - name: whoami
+    image: traefik/whoami:latest
+  affinity:
+    nodeAffinity: # affinity --> run when term matches
+      # preferredDuringSchedulingIgnoredDuringExecution: soft affinity
+      # - weight: 1 - higher weight has more priority 1 - 100
+      requiredDuringSchedulingIgnoredDuringExecution: # hard affinity
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: gpu
+            operator: In
+            values:
+            - nvidia
+    podAntiAffinity: # anti-affinity --> don't run when term matches
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - nginx
+        topologyKey: "kubernetes.io/hostname"

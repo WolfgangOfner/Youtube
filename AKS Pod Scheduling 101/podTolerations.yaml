@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: whoami
+spec:
+  containers:
+  - name: whoami
+    image: traefik/whoami:latest
+  tolerations:
+  - key: "gpu"
+    operator: "Equal"
+    value: "amd" # amd
+    effect: "NoSchedule"
