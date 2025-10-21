@@ -1,0 +1,44 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: $GatewayName
+  namespace: $InfrastructureNamespace
+  annotations:
+    alb.networking.azure.io/alb-namespace: $InfrastructureNamespace
+    alb.networking.azure.io/alb-name: $ApplicationLoadBalancerName
+    cert-manager.io/cluster-issuer: $ClusterIssuerName
+spec:
+  gatewayClassName: $GatewayClassName
+  listeners:
+  - name: http-listener
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: traefik-https-listener
+    port: 443
+    protocol: HTTPS
+    hostname: $TraefikUrl
+    tls:
+      certificateRefs:
+        - group: ""
+          kind: Secret
+          name: $TraefikSecretName
+          namespace: $InfrastructureNamespace
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: nginx-https-listener
+    port: 443
+    protocol: HTTPS
+    hostname: $NginxUrl
+    tls:
+      certificateRefs:
+        - group: ""
+          kind: Secret
+          name: $NginxSecretName
+          namespace: $InfrastructureNamespace
+    allowedRoutes:
+      namespaces:
+        from: All

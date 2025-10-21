@@ -1,0 +1,34 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: customerapi-prod
+  namespace: customerapi-prod
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    kubernetes.io/ingress.class: nginx
+    meta.helm.sh/release-name: customerapi-customerapi-prod
+    meta.helm.sh/release-namespace: customerapi-prod
+    nginx.ingress.kubernetes.io/use-regex: 'true'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - customer.programmingwithwolfgang.com
+      secretName: customerapi-tls
+  rules:
+    - host: customer.programmingwithwolfgang.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: customerapi
+                port:
+                  number: 80
+status:
+  loadBalancer:
+    ingress:
+      - ip: 130.107.205.170

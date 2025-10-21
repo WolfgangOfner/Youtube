@@ -1,0 +1,52 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-basic
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.13.2
+    helm.sh/chart: ingress-nginx-4.13.2
+  annotations:
+    meta.helm.sh/release-name: ingress-nginx
+    meta.helm.sh/release-namespace: ingress-basic
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      appProtocol: http
+      port: 80
+      targetPort: http
+      nodePort: 32301
+    - name: https
+      protocol: TCP
+      appProtocol: https
+      port: 443
+      targetPort: https
+      nodePort: 31442
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+  clusterIP: 10.0.53.177
+  clusterIPs:
+    - 10.0.53.177
+  type: LoadBalancer
+  sessionAffinity: None
+  externalTrafficPolicy: Local
+  healthCheckNodePort: 30869
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  allocateLoadBalancerNodePorts: true
+  internalTrafficPolicy: Cluster
+status:
+  loadBalancer:
+    ingress:
+      - ip: 52.139.6.71
+        ipMode: VIP
