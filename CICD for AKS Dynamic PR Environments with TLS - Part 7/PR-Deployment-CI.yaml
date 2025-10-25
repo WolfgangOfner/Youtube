@@ -1,0 +1,14 @@
+name: PR-Deployment-CI
+trigger:
+  branches:
+    include:
+    - main 
+  paths:
+    include:
+      - 'CICD for AKS Dynamic PR Environments with TLS - Part 7/*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- bash: echo "Building great stuff"

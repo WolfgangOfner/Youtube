@@ -1,0 +1,199 @@
+name: PR-Deployment-CD
+trigger: none
+resources:
+  pipelines:
+  - pipeline: PrDeploymentBuild
+    source: PR-Deployment-CI
+    trigger:
+     branches:
+      include:
+        - master
+        - main
+        - pull/*
+        - refs/pull/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  AzureServiceConnection: 'AzureServiceConnection' 
+  ResourceGroup: 'app-gateway-container-rg'
+  AksClusterName: 'app-gateway-container-aks'
+  Namespace: 'pr-$(prId)'
+  InfrastructureNamespace: 'alb-infra'
+  Domain: '.pullrequest.programmingwithwolfgang.com'
+  URL: '$(Namespace)$(Domain)'
+  GatewayName: 'gateway'
+
+stages:
+- stage: DeployPullRequest
+  condition: startsWith(variables['resources.pipeline.PrDeploymentBuild.sourcebranch'], 'refs/pull/') 
+  displayName: 'Deploy Pull Request to AKS'
+  jobs:
+  - deployment: DeployWhoami
+    displayName: 'Deployment Whoami'
+    environment: pr-deployment
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - pwsh: |
+              $prId = [regex]::match('$(resources.pipeline.PrDeploymentBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
+              Write-Host "##vso[task.setvariable variable=prId;]$prId"
+              Write-Host $prId
+            displayName: 'Get PR Id'
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group $(ResourceGroup) --name $(AksClusterName) --admin --overwrite-existing
+            displayName: 'Get AKS Credentials'
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                # kubectl create ns $(Namespace)
+                kubectl create namespace $(Namespace) --dry-run=client -o yaml | kubectl apply -f -
+            displayName: 'Create new namespace'
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl apply -f - -n $(Namespace) <<EOF
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: "whoami-deployment"
+                  labels:
+                    app: whoami
+                spec:
+                  replicas: 1
+                  selector:
+                    matchLabels:
+                      app: whoami
+                  template:
+                    metadata:
+                      labels:
+                        app: whoami
+                    spec:
+                      containers:
+                      - name: whoami
+                        image: traefik/whoami:latest
+                        ports:
+                        - containerPort: 80
+                EOF
+            displayName: 'Deploy Kubernetes Deployment'
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl apply -f - -n $(Namespace) <<EOF
+                apiVersion: v1
+                kind: Service
+                metadata:  
+                  name: whoami
+                  labels:
+                    app: whoami
+                spec:
+                  type: ClusterIP
+                  selector:
+                    app: whoami
+                  ports:
+                  - port: 80
+                    targetPort: 80 
+                    protocol: TCP
+                    name: http
+                EOF
+            displayName: 'Deploy Service'
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl apply -f - <<EOF
+                apiVersion: gateway.networking.k8s.io/v1
+                kind: HTTPRoute
+                metadata:
+                  name: pr-httproute
+                  namespace: $(Namespace)
+                spec:
+                  parentRefs:
+                    - name: $(GatewayName)
+                      namespace: $(InfrastructureNamespace)
+                  hostnames:
+                    - $(Url)
+                  rules:
+                    - matches:
+                      backendRefs:
+                        - name: whoami
+                          port: 80
+                EOF
+            displayName: 'Create HTTPRoute'
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: 'echo "Here is your application: https://$(URL) - Happy Testing :)"'
+            displayName: 'Print URL'
+
+- stage: DeletePullRequest
+  dependsOn: DeployPullRequest
+  condition: succeeded('DeployPullRequest')
+  jobs:  
+  - deployment: Delete_PR_Namespace
+    environment: 'whoami-PR-Delete'
+    displayName: 'Delete Pull Request Namespace'
+    strategy:
+      runOnce:
+        deploy:
+         steps:
+          - pwsh: |
+              $prId = [regex]::match('$(resources.pipeline.PrDeploymentBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
+              Write-Host "##vso[task.setvariable variable=prId;]$prId"
+            displayName: 'Get PR Id'
+            
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group $(ResourceGroup) --name $(AksClusterName) --admin --overwrite-existing
+
+                kubectl delete ns $(Namespace)
+            displayName: 'Get AKS Credentials and delete PR Namespace'
+
+- stage: Test
+  condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/main')
+  jobs:  
+  - deployment: Test
+    environment: 'whoami-PR-Test'
+    displayName: 'Deploy application in Test environment'
+    strategy:
+      runOnce:
+        deploy:
+         steps:
+          - pwsh: |
+              Write-Host "Do cool stuff"
+            displayName: 'Do some cool stuff'
+
+- stage: Prod
+  dependsOn: Test
+  condition: and(succeeded('Test'), startsWith(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:  
+  - deployment: Prod
+    environment: 'whoami-PR-Prod'
+    displayName: 'Deploy application in Prod environment'
+    strategy:
+      runOnce:
+        deploy:
+         steps:
+          - pwsh: |
+              Write-Host "Do more cool stuff"
+            displayName: 'Do some cool stuff'
