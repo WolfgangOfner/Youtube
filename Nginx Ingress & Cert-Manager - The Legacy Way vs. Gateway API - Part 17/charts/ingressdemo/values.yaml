@@ -1,0 +1,43 @@
+replicaCount: 1
+
+image:
+  repository: traefik/whoami
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+serviceAccount:  
+  create: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: <YOUR_URL>
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ingress-tls-secret
+      hosts:
+        - <YOUR_URL>
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+
+autoscaling:
+  enabled: false
+
+httpRoute:
+  enabled: false
