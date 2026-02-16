@@ -100,11 +100,10 @@ The ApplicationLoadBalancer creates the Application Gateway for Containers resou
 kubectl get applicationloadbalancer $ApplicationLoadBalancerName -n $InfrastructureNamespace -o yaml --watch
 ```
 
-If the reason and status of the ApplicationLoadBalancer do not change to "Ready" and "True", use the following code to check the logs
-Note: Currently there are no pods running for the ALB when using the AKS addon.
+If the reason and status of the ApplicationLoadBalancer do not change to "Ready" and "True", use the following code to check the logs of the alb-controller pods in the kube-system namespace
 
 ```
-kubectl get pods -n $InfrastructureNamespace
+kubectl get pods -n kube-system
 ```
 
 The Application Gateway for Container is now created
