@@ -1,0 +1,84 @@
+trigger: none
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  AksClusterName: Ado-Aks-Entra-aks
+  AzureServiceConnection: AzureServiceConnection
+  ResourceGroupLocation: CanadaCentral
+  ResourceGroupName: Ado-Aks-Entra-rg
+
+steps:
+  - checkout: none
+
+  - task: AzureCLI@2    
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az group create -g $(ResourceGroupName) -l $(ResourceGroupLocation)
+    displayName: "Create resource group"
+
+  - task: AzureCLI@2    
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks create `
+            --resource-group "$(ResourceGroupName)" `
+            --name "$(AksClusterName)" `
+            --enable-aad `
+            --enable-azure-rbac
+    displayName: "Create AKS Cluster"
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $pipelineUserId=$(az ad sp show --id $(az account show --query user.name -o tsv) --query appId -o tsv)
+        $aksId=$(az aks show --resource-group $(ResourceGroupName) --name $(AksClusterName) --query id -o tsv)
+        
+        az role assignment create `
+            --role "Azure Kubernetes Service RBAC Cluster Admin" `
+            --assignee $pipelineUserId `
+            --scope $aksId
+    displayName: 'Set Permissions for AKS'
+
+  - task: KubeloginInstaller@0
+    inputs:
+      kubeloginVersion: 'latest'
+    displayName: 'Install Kubelogin'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+        kubelogin convert-kubeconfig -l azurecli
+    displayName: 'Get AKS Credentials'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        kubectl get ns
+    displayName: 'Display AKS Namespaces'
+
+  - task: HelmDeploy@1
+    inputs:
+      connectionType: 'Azure Resource Manager'
+      azureSubscription: '$(AzureServiceConnection)'
+      azureResourceGroup: '$(ResourceGroupName)'
+      kubernetesCluster: '$(AksClusterName)'
+      namespace: 'default'
+      command: 'ls'
+    displayName: 'Helm ls'
