@@ -1,0 +1,230 @@
+name : AksDemoApp-CD
+trigger: none
+resources:
+  pipelines:
+   - pipeline: AksDemoAppBuild
+     source: AksDemoApp-CI
+     trigger:
+      branches:
+       include:
+         - main
+         - pull/*
+         - refs/pull/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  AksClusterName: wolfgang-demo-aks
+  ApiName: 'AksDemoApp'
+  ArtifactName: 'aksdemoapp'
+  AzureServiceConnection: 'AzureServiceConnection'
+  BaseUrl: 'aks-demo.programmingwithwolfgang.com'
+  ChartPackage: '$(Pipeline.Workspace)/AksDemoAppBuild/$(ArtifactName)/$(ArtifactName)-$(resources.pipeline.AksDemoAppBuild.runname).tgz'
+  ResourceGroupName: Demo-Aks
+  ValuesFile: '$(Pipeline.Workspace)/AksDemoAppBuild/$(ArtifactName)/values.yaml'
+  WildcardSectionName: 'demo-https-wildcard-listener'
+
+stages:
+- stage: PR_Deploy
+  condition: startsWith(variables['resources.pipeline.AksDemoAppBuild.sourcebranch'], 'refs/pull/')
+  variables:
+    DeploymentEnvironment: 'pr-$(PrId)'
+    K8sNamespace: '$(ArtifactName)-$(DeploymentEnvironment)'
+    SectionName: $(WildcardSectionName)
+    URL: $(DeploymentEnvironment).$(BaseUrl)    
+  jobs:
+  - deployment: Web_PR
+    environment: "$(ArtifactName)-PR-Deploy" 
+    displayName: 'Deploy AksDemoApp to the PR environment'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: AksDemoAppBuild
+            artifact: $(ArtifactName)
+          - pwsh: |
+              $prId = [regex]::match('$(resources.pipeline.AksDemoAppBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
+              Write-Host "##vso[task.setvariable variable=PrId;]$prId"
+            displayName: 'Get PR Id'
+
+          - task: Tokenizer@0
+            displayName: 'Run Tokenizer'
+            inputs:
+              sourceFilesPattern: $(ValuesFile)
+
+          - task: KubeloginInstaller@0
+            inputs:
+              kubeloginVersion: 'latest'
+            displayName: installkubelogin
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+                kubelogin convert-kubeconfig -l azurecli
+            displayName: 'Get AKS Credentials'
+
+          - task: HelmDeploy@1
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: '$(AzureServiceConnection)'
+              azureResourceGroup: '$(ResourceGroupName)'
+              kubernetesCluster: '$(AksClusterName)'
+              namespace: '$(K8sNamespace)'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(ChartPackage)'
+              releaseName: '$(ArtifactName)-$(DeploymentEnvironment)'
+              valueFile: '$(ValuesFile)'
+              arguments: '--create-namespace'
+
+- stage: PR_Delete
+  dependsOn: PR_Deploy
+  condition: succeeded('PR_Deploy')
+  variables:
+    K8sNamespace: '$(ArtifactName)-pr-$(PrId)'
+  jobs:  
+  - deployment: Delete_PR_Namespace
+    environment: "$(ArtifactName)-PR-Delete" 
+    displayName: 'Delete AksDemoApp PR environment'
+    strategy:
+      runOnce:
+        deploy:
+         steps:
+         - download: none
+         - pwsh: |
+             $prId = [regex]::match('$(resources.pipeline.AksDemoAppBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
+             Write-Host "##vso[task.setvariable variable=PrId;]$prId"
+           displayName: 'Get PR Id'
+
+         - task: KubeloginInstaller@0
+           inputs:
+             kubeloginVersion: 'latest'
+           displayName: installkubelogin
+       
+         - task: AzureCLI@2
+           inputs:
+             azureSubscription: $(AzureServiceConnection)
+             scriptType: 'pscore'
+             scriptLocation: 'inlineScript'
+             inlineScript: |
+               az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+               kubelogin convert-kubeconfig -l azurecli
+           displayName: 'Get AKS Credentials'
+
+         - task: Kubernetes@1
+           inputs:
+             connectionType: 'Azure Resource Manager'
+             azureSubscriptionEndpoint: '$(AzureServiceConnection)'
+             azureResourceGroup: $(ResourceGroupName)
+             kubernetesCluster: $(AksClusterName)
+             useClusterAdmin: true
+             command: 'delete'
+             arguments: 'namespaces $(k8sNamespace)'
+           displayName: 'Delete PR namespace'
+
+- stage: Test
+  condition: startsWith(variables['resources.pipeline.AksDemoAppBuild.sourcebranch'], 'refs/heads/main')
+  variables:
+    DeploymentEnvironment: 'test'
+    K8sNamespace: '$(ArtifactName)-$(DeploymentEnvironment)'
+    SectionName: $(WildcardSectionName)
+    Url: $(DeploymentEnvironment).$(BaseUrl)
+  jobs:
+  - deployment: AksDemoApp_Test
+    displayName: 'Deploy AksDemoApp to Test'
+    environment: $(ArtifactName)-test
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: AksDemoAppBuild
+            artifact: $(ArtifactName)
+
+          - template: templates/Tokenizer.yml
+            parameters:
+              valuesFile: $(ValuesFile)
+
+          - task: KubeloginInstaller@0
+            inputs:
+              kubeloginVersion: 'latest'
+            displayName: installkubelogin
+        
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+                kubelogin convert-kubeconfig -l azurecli
+            displayName: 'Get AKS Credentials'
+
+          - task: HelmDeploy@1
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: '$(AzureServiceConnection)'
+              azureResourceGroup: '$(ResourceGroupName)'
+              kubernetesCluster: '$(AksClusterName)'
+              namespace: '$(K8sNamespace)'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(ChartPackage)'
+              releaseName: '$(ArtifactName)-$(DeploymentEnvironment)'
+              valueFile: '$(ValuesFile)'
+              arguments: '--create-namespace'
+
+- stage: Prod
+  condition: startsWith(variables['resources.pipeline.AksDemoAppBuild.sourcebranch'], 'refs/heads/main')
+  variables:
+    DeploymentEnvironment: 'prod'
+    K8sNamespace: '$(ArtifactName)-$(DeploymentEnvironment)'
+    SectionName: demo-https-listener
+    URL: $(BaseUrl)
+  jobs:
+  - deployment: AksDemoApp_prod
+    displayName: 'Deploy AksDemoApp to Prod'
+    environment: $(ArtifactName)-prod
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: AksDemoAppBuild
+            artifact: $(ArtifactName)
+            
+          - template: templates/Tokenizer.yml
+            parameters:
+              valuesFile: $(ValuesFile)
+
+          - task: KubeloginInstaller@0
+            inputs:
+              kubeloginVersion: 'latest'
+            displayName: installkubelogin
+        
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(AzureServiceConnection)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+                kubelogin convert-kubeconfig -l azurecli
+            displayName: 'Get AKS Credentials'
+            
+          - task: HelmDeploy@1
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: '$(AzureServiceConnection)'
+              azureResourceGroup: '$(ResourceGroupName)'
+              kubernetesCluster: '$(AksClusterName)'
+              namespace: '$(K8sNamespace)'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(ChartPackage)'
+              releaseName: '$(ArtifactName)-$(DeploymentEnvironment)'
+              valueFile: '$(ValuesFile)'
+              arguments: '--create-namespace'

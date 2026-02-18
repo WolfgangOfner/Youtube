@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AksDemoApp.Test/AksDemoApp.Test.csproj" />
+  <Project Path="AksDemoApp/AksDemoApp.csproj" />
+</Solution>

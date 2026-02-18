@@ -1,0 +1,360 @@
+trigger: none
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:  
+  AksClusterName: wolfgang-demo-aks
+  AzureServiceConnection: AzureServiceConnection
+  AzureServiceConnectionDns: AzureServiceConnectionDns
+  CertManagerManagedIdentityName: cert-manager
+  CertManagerNamespace: cert-manager
+  CertManagerServiceAccountName: cert-manager
+  CertManagerVersion: v1.19.2
+  ClusterIssuerEmail: wolfgang@programmingwithwolfgang.com
+  ClusterIssuerName: letsencrypt
+  DemoAppSecretName: demo-letsencrypt-secret
+  DemoAppPrSecretName: demo-wildcard-letsencrypt-secret
+  DemoAppUrl: aks-demo.$(DnsZoneName)
+  DnsRecords: "@('nginx','traefik', 'aks-demo', '*.aks-demo')"
+  DnsResourceGroupName: ProgrammingWithWolfgang
+  DnsZoneName: programmingwithwolfgang.com
+  GatewayClassName: envoy
+  GatewayEnvoyVersion: v1.6.1
+  GatewayName: gateway
+  GatewayNamespace: gateway
+  HttpListenerName: http-listener
+  Kubernetesversion: 1.34.2
+  NetworkPlugin: azure 
+  ResourceGroupLocation: CanadaCentral
+  ResourceGroupName: Demo-Aks
+
+steps:
+  - checkout: none
+
+  - task: AzureCLI@2
+    displayName: "Create resource group"
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az group create -g $(ResourceGroupName) -l $(ResourceGroupLocation)
+
+  - task: AzureCLI@2
+    displayName: "Create AKS cluster"
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks create `
+            --resource-group "$(ResourceGroupName)" `
+            --name "$(AksClusterName)" `
+            --network-plugin $(NetworkPlugin) `
+            --kubernetes-version $(KubernetesVersion) `
+            --node-vm-size Standard_B2s `
+            --enable-cluster-autoscaler `
+            --min-count 1 `
+            --max-count 3 `
+            --enable-oidc-issuer `
+            --enable-workload-identity `
+            --enable-aad `
+            --enable-azure-rbac
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $pipelineUserId=$(az ad sp show --id $(az account show --query user.name -o tsv) --query appId -o tsv)
+        $aksId=$(az aks show --resource-group $(ResourceGroupName) --name $(AksClusterName) --query id -o tsv)
+        
+        az role assignment create `
+            --role "Azure Kubernetes Service RBAC Cluster Admin" `
+            --assignee $pipelineUserId `
+            --scope $aksId
+
+        az role assignment create `
+            --role "Azure Kubernetes Service RBAC Cluster Admin" `
+            --assignee-object-id af1d0f19-4f34-4a75-8d69-3fa8bc5c2085 `
+            --assignee-principal-type "User" `
+            --scope $aksId
+    displayName: 'Set Permissions for AKS'
+
+  - task: KubeloginInstaller@0
+    inputs:
+      kubeloginVersion: 'latest'
+    displayName: installkubelogin
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
+        kubelogin convert-kubeconfig -l azurecli
+    displayName: 'Get AKS Credentials'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az identity create `
+          --name $(CertManagerManagedIdentityName) `
+          --resource-group $(ResourceGroupName)
+
+        $certManagerManagedIdentityObjectId=$(`
+          az identity show `
+          --name $(CertManagerManagedIdentityName) `
+          --resource-group $(ResourceGroupName) `
+          --query 'principalId' `
+          --output tsv)
+
+        $certManagerManagedIdentityClientId=$(`
+          az identity show `
+          --name $(CertManagerManagedIdentityName) `
+          --resource-group $(ResourceGroupName) `
+          --query 'clientId' `
+          --output tsv)
+
+        Write-Host "##vso[task.setvariable variable=CertManagerManagedIdentityObjectId;]$certManagerManagedIdentityObjectId"
+        Write-Host "##vso[task.setvariable variable=CertManagerManagedIdentityClientId;]$certManagerManagedIdentityClientId"
+    displayName: 'Create Managed Identity'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnectionDns)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az role assignment create `
+            --role "DNS Zone Contributor" `
+            --assignee-object-id "$(CertManagerManagedIdentityObjectId)" `
+            --assignee-principal-type "ServicePrincipal" `
+            --scope $(`
+                az network dns zone show `
+                --name $(DnsZoneName) `
+                --resource-group $(DnsResourceGroupName) `
+                --query id `
+                --output tsv)
+    displayName: 'Assign DNS Zone Contributor to Managed Identity'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $aksOidcIssuer="$(`
+          az aks show `
+          --resource-group $(ResourceGroupName) `
+          --name $(AksClusterName) `
+          --query "oidcIssuerProfile.issuerUrl" `
+          --output tsv)"
+
+        az identity federated-credential create `
+          --name $(CertManagerServiceAccountName) `
+          --identity-name $(CertManagerManagedIdentityName) `
+          --resource-group $(ResourceGroupName) `
+          --issuer $aksOidcIssuer `
+          --subject "system:serviceaccount:$(CertManagerNamespace):$(CertManagerServiceAccountName)"
+    displayName: 'Create Federated Credential'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        helm repo add jetstack https://charts.jetstack.io --force-update
+        helm install `
+          cert-manager jetstack/cert-manager `
+          --namespace $(CertManagerNamespace) `
+          --create-namespace `
+          --version $(CertManagerVersion) `
+          --set config.enableGatewayAPI=true `
+          --set crds.enabled=true `
+          --set-string podLabels."azure\.workload\.identity/use"=true `
+          --set-string serviceAccount.labels."azure\.workload\.identity/use"=true
+    displayName: 'Deploy Cert-Manager'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureServiceConnection)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $ClusterIssuer = @"
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: $(ClusterIssuerName)
+        spec:
+          acme:
+            server: https://acme-v02.api.letsencrypt.org/directory # production endpoint
+            # server: https://acme-staging-v02.api.letsencrypt.org/directory # staging endpoint
+            email: $(ClusterIssuerEmail)
+            privateKeySecretRef:
+              name: letsencrypt-private-key
+            solvers:
+              - http01:
+                  gatewayHTTPRoute:
+                    parentRefs:
+                      - name: $(GatewayName)
+                        namespace: $(GatewayNamespace)
+                        kind: Gateway
+              - dns01:
+                  azureDNS:
+                    hostedZoneName: $(DnsZoneName)
+                    resourceGroupName: $(DnsResourceGroupName)
+                    subscriptionID: $(DnsSubscriptionId)
+                    environment: AzurePublicCloud
+                    managedIdentity:
+                      clientID: $(CertManagerManagedIdentityClientId)
+        "@
+
+        $ClusterIssuer | kubectl apply -f -
+    displayName: 'Create ClusterIssuer'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        helm install envoy oci://docker.io/envoyproxy/gateway-helm `
+        --version $(GatewayEnvoyVersion) `
+        --namespace $(GatewayNamespace) `
+        --create-namespace `
+        --set deployment.replicas=3
+    displayName: 'Install Envoy Gateway API'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $GatewayClass = @"
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: GatewayClass
+        metadata:
+          name: $(GatewayClassName)
+        spec:
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        "@
+
+        $GatewayClass | kubectl apply -f -
+    displayName: 'Deploy GatewayClass'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $Gateway = @"
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        metadata:
+          name: $(GatewayName)
+          namespace: $(GatewayNamespace)
+          annotations:
+            cert-manager.io/cluster-issuer: $(ClusterIssuerName)
+        spec:
+          gatewayClassName: $(GatewayClassName)
+          listeners:
+          - name: $(HttpListenerName)
+            port: 80
+            protocol: HTTP
+            allowedRoutes:
+              namespaces:
+                from: All
+          - name: demo-https-listener
+            port: 443
+            protocol: HTTPS
+            hostname: $(DemoAppUrl)
+            allowedRoutes:
+              namespaces:
+                from: All 
+            tls:
+              certificateRefs:
+                - group: ""
+                  kind: Secret
+                  name: $(DemoAppSecretName)
+          - name: demo-https-wildcard-listener
+            port: 443
+            protocol: HTTPS
+            hostname: "*.$(DemoAppUrl)"
+            allowedRoutes:
+              namespaces:
+                from: All 
+            tls:
+              certificateRefs:
+                - group: ""
+                  kind: Secret
+                  name: $(DemoAppPrSecretName)
+        "@
+
+        $Gateway | kubectl apply -f -
+    displayName: 'Deploy Gateway'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        $RedirectRoute = @"
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: http-to-https-redirect
+          namespace: $(GatewayNamespace)
+        spec:
+          parentRefs:
+          - name: $(GatewayName)
+            namespace: $(GatewayNamespace)
+            sectionName: $(HttpListenerName)
+          rules:
+          - filters:
+            - type: RequestRedirect
+              requestRedirect:
+                scheme: https
+                statusCode: 301
+        "@
+
+        $RedirectRoute | kubectl apply -f -
+    displayName: 'Deploy HTTP to HTTPS Redirect'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnection)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        Start-Sleep -Seconds 60
+
+        $fqdn=$(kubectl get gateway $(GatewayName) -n $(GatewayNamespace) -o jsonpath='{.status.addresses[0].value}')
+        Write-Host "##vso[task.setvariable variable=Fqdn;]$fqdn"
+        Write-Host $fqdn
+    displayName: 'Get Gateway IP'
+
+  # Update DNS Records
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(AzureServiceConnectionDns)'
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        ForEach ($dnsRecord in $(DnsRecords)) {
+          $ip=$(az network dns record-set a show -g $(DnsResourceGroupName) -z $(DnsZoneName) -n $dnsRecord --query "ARecords[0].ipv4Address" -o tsv)
+          az network dns record-set a remove-record -g $(DnsResourceGroupName) -z $(DnsZoneName) -n $dnsRecord -a $ip --keep-empty-record-set
+          az network dns record-set a add-record -g $(DnsResourceGroupName) -z $(DnsZoneName) -n $dnsRecord -a $(Fqdn)
+        }
+    displayName: "Update existing DNS Records"

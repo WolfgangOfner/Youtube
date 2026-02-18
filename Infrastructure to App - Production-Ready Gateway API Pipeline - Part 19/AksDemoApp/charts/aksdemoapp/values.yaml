@@ -1,0 +1,48 @@
+replicaCount: 1
+
+image:
+  # repository: wolfgangofner/myhelm
+  # pullPolicy: Always
+  # tag: "3"
+  repository: __Repository__
+  pullPolicy: Always  
+  tag: __BuildNumber__
+
+serviceAccount:
+  create: true
+  automount: false
+
+service:
+  type: ClusterIP
+  port: 80
+  # targetPort: 8080
+
+httpRoute:
+  enabled: true
+  parentRefs:
+  - name: gateway
+    namespace: gateway
+    sectionName: __SectionName__
+  hostnames:
+  # - yyy.aks-demo.programmingwithwolfgang.com
+    - __URL__
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8080
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8080
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80

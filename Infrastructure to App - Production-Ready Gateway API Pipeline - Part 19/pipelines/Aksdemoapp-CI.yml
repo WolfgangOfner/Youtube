@@ -1,0 +1,128 @@
+name : AksDemoApp-CI
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - 'Infrastructure to App - Production-Ready Gateway API Pipeline - Part 19/*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  ApiName: 'AksDemoApp'
+  ArtifactName: 'aksdemoapp'
+  BuildId: $(Build.BuildId)
+  BuildNumber: $(GitVersion_SemVer)$(GitVersion_CommitsSinceVersionSource)
+  ContainerRegistry: 'Docker Hub'
+  ChartPath: '$(ProjectRootFolder)/$(ApiName)/charts/$(ArtifactName)'
+  ProjectRootFolder: 'Infrastructure to App - Production-Ready Gateway API Pipeline - Part 19'
+  Repository: 'wolfgangofner/$(ArtifactName)'
+  ValuesFile: '$(ChartPath)/values.yaml'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    displayName: Build and push Docker image and create Helm package
+    steps:    
+    - task: gitversion-setup@4.2.0
+      displayName: Install GitVersion
+      inputs:
+        versionSpec: '6.4.x'
+        
+    - task: gitversion-execute@4.2.0
+      displayName: Determine Version
+
+
+    - task: gitversion-command@4.2.0
+      displayName: Update Build Title
+      inputs:
+        arguments: '/output buildserver'
+        
+    - task: Docker@2
+      displayName: 'Run Tests'
+      inputs:
+        containerRegistry: $(ContainerRegistry)
+        repository: $(Repository)
+        command: 'build'
+        Dockerfile: '**/$(ApiName)/Dockerfile'
+        buildContext: '$(ProjectRootFolder)'
+        tags: |
+          $(BuildNumber)
+          latest
+        arguments: '--target test --build-arg BuildId=$(BuildId)'
+
+    - pwsh: |
+       $id=docker images --filter "label=test=$(BuildId)" -q | Select-Object -First 1
+       docker create --name testcontainer $id
+       docker cp testcontainer:/testresults ./testresults
+       docker rm testcontainer
+      displayName: 'Copy test results'
+
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '**/*.trx'
+        searchFolder: '$(System.DefaultWorkingDirectory)/testresults'
+      displayName: 'Publish test results'
+
+    - task: PublishCodeCoverageResults@2
+      inputs:
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/testresults/coverage/coverage.cobertura.xml'
+        pathToSources: '$(System.DefaultWorkingDirectory)/testresults/coverage/reports'
+      displayName: 'Publish code coverage results'
+
+    - task: Docker@2
+      displayName: 'Build Docker Container'
+      inputs:
+        containerRegistry: $(ContainerRegistry)
+        repository: $(Repository)
+        command: 'build'
+        Dockerfile: '**/$(ApiName)/Dockerfile'
+        buildContext: '$(ProjectRootFolder)'
+        tags: |
+          $(BuildNumber)
+          latest
+        arguments: '--build-arg BuildId=$(BuildId)'
+
+    - task: Docker@2
+      displayName: 'Push Docker Container'
+      inputs:
+        containerRegistry: $(ContainerRegistry)
+        repository: $(Repository)
+        command: 'push'
+        tags: |
+          $(BuildNumber)
+
+    - task: Docker@2
+      condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+      inputs:
+        containerRegistry: $(ContainerRegistry)
+        repository: $(Repository)
+        command: 'push'
+        tags: |
+          latest
+      displayName: 'Push Docker Container'
+    - task: Tokenizer@0
+      displayName: 'Run Tokenizer'
+      inputs:
+        sourceFilesPattern: $(ValuesFile)
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: $(ChartPath)
+        Contents: values.yaml
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/$(ArtifactName)'
+      displayName: 'Copy Files'
+
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: "helm package '$(ChartPath)' --destination $(Build.ArtifactStagingDirectory)/$(ArtifactName) --version $(GitVersion_FullSemVer)"
+      displayName: 'Helm package'
+
+    - publish: '$(Build.ArtifactStagingDirectory)/$(ArtifactName)'
+      artifact: '$(ArtifactName)'
+      displayName: 'Publish Artifact: $(ArtifactName)'

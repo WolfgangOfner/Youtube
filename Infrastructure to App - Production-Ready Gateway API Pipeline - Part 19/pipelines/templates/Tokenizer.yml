@@ -1,0 +1,10 @@
+parameters:
+  - name: valuesFile
+    type: string
+    default: 
+
+steps:
+  - task: Tokenizer@0
+    displayName: 'Run Tokenizer'
+    inputs:
+      sourceFilesPattern: ${{ parameters.valuesFile }}
