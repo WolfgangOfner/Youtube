@@ -35,12 +35,11 @@ stages:
     - task: gitversion-execute@4.2.0
       displayName: Determine Version
 
-
     - task: gitversion-command@4.2.0
       displayName: Update Build Title
       inputs:
         arguments: '/output buildserver'
-        
+ 
     - task: Docker@2
       displayName: 'Run Tests'
       inputs:
@@ -105,6 +104,7 @@ stages:
         tags: |
           latest
       displayName: 'Push Docker Container'
+
     - task: Tokenizer@0
       displayName: 'Run Tokenizer'
       inputs:

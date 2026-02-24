@@ -3,7 +3,7 @@ trigger: none
 pool:
   vmImage: "ubuntu-latest"
 
-variables:  
+variables:
   AksClusterName: wolfgang-demo-aks
   AzureServiceConnection: AzureServiceConnection
   AzureServiceConnectionDns: AzureServiceConnectionDns
@@ -59,8 +59,8 @@ steps:
             --max-count 3 `
             --enable-oidc-issuer `
             --enable-workload-identity `
-            --enable-aad `
-            --enable-azure-rbac
+            --enable-aad `
+            --enable-azure-rbac
 
   - task: AzureCLI@2
     inputs:
@@ -345,7 +345,6 @@ steps:
         Write-Host $fqdn
     displayName: 'Get Gateway IP'
 
-  # Update DNS Records
   - task: AzureCLI@2
     inputs:
       azureSubscription: '$(AzureServiceConnectionDns)'

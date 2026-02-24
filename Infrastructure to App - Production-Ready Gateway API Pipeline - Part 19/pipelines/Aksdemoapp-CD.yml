@@ -43,6 +43,7 @@ stages:
           steps:
           - download: AksDemoAppBuild
             artifact: $(ArtifactName)
+
           - pwsh: |
               $prId = [regex]::match('$(resources.pipeline.AksDemoAppBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
               Write-Host "##vso[task.setvariable variable=PrId;]$prId"
@@ -95,7 +96,8 @@ stages:
       runOnce:
         deploy:
          steps:
-         - download: none
+         - download: noned
+
          - pwsh: |
              $prId = [regex]::match('$(resources.pipeline.AksDemoAppBuild.sourcebranch)','(refs/pull/)(\d*)(/merge)').Groups[2].Value
              Write-Host "##vso[task.setvariable variable=PrId;]$prId"
@@ -105,7 +107,7 @@ stages:
            inputs:
              kubeloginVersion: 'latest'
            displayName: installkubelogin
-       
+
          - task: AzureCLI@2
            inputs:
              azureSubscription: $(AzureServiceConnection)
@@ -153,7 +155,7 @@ stages:
             inputs:
               kubeloginVersion: 'latest'
             displayName: installkubelogin
-        
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(AzureServiceConnection)
@@ -195,7 +197,7 @@ stages:
           steps:
           - download: AksDemoAppBuild
             artifact: $(ArtifactName)
-            
+
           - template: templates/Tokenizer.yml
             parameters:
               valuesFile: $(ValuesFile)
@@ -204,7 +206,7 @@ stages:
             inputs:
               kubeloginVersion: 'latest'
             displayName: installkubelogin
-        
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(AzureServiceConnection)
@@ -214,7 +216,7 @@ stages:
                 az aks get-credentials --resource-group $(ResourceGroupName) --name $(AksClusterName) --overwrite-existing
                 kubelogin convert-kubeconfig -l azurecli
             displayName: 'Get AKS Credentials'
-            
+
           - task: HelmDeploy@1
             inputs:
               connectionType: 'Azure Resource Manager'
