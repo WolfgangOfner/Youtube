@@ -387,5 +387,3 @@ kubectl get all -n $DemoTwoNamespace
 
 curl https://$DnsSubZoneTwo -UseBasicParsing
 ```
-
-Show activity log of DNS Zone
