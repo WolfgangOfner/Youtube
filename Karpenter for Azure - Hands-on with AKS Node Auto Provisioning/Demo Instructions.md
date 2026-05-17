@@ -313,6 +313,9 @@ spec:
 $DemoApp | kubectl apply -f -
 
 kubectl get nodes -L topology.disk.csi.azure.com/zone
+kubectl get pods
+
+kubectl get events -A --field-selector type=Warning,reportingComponent=karpenter --sort-by='.lastTimestamp'
 
 kubectl scale deployment nap-test-workload --replicas=0
 
@@ -360,6 +363,9 @@ spec:
 "@
 
 $DemoApp | kubectl apply -f -
+
+kubectl get nodes -L topology.disk.csi.azure.com/zone
+kubectl get pods
 
 $DemoApp = @"
 apiVersion: apps/v1
