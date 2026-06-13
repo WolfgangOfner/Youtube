@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "ado-remote-mcp": {
+      "url": "https://mcp.dev.azure.com/<YOUR_ORGANIZATION>",
+      "type": "http",
+      "headers": {
+        "X-MCP-Toolsets": "repos,wiki,wit,pipelines",
+        "X-MCP-Readonly": "true"
+      }
+    }
+  },
+  "inputs": []
+}
