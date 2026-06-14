@@ -1,0 +1,6 @@
+{
+  "type": "UserAssigned",
+  "userAssignedIdentities": {
+    "/subscriptions/e347e896-c1d2-4aea-b63d-2c7f5f6acc7e/resourcegroups/mdp-demo-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mdp-identity": {}
+  }
+}
