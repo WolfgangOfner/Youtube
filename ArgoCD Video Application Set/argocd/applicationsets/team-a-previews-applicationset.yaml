@@ -1,0 +1,70 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-a-previews
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    # Inner matrix comes first: the outer matrix interpolates its second child with the first
+    # child's params, which would break {{ .branch }} if the PR/git matrix were second
+    - matrix:
+        generators:
+          - matrix:
+              generators:
+                # One entry per open pull request in the team's repo
+                - pullRequest:
+                    azuredevops:
+                      organization: ProgrammingWithWolfgang
+                      project: Developer Platform Playground
+                      repo: GitOps
+                      tokenRef:
+                        secretName: ado-pr-token
+                        key: token
+                    requeueAfterSeconds: 120
+
+                # Apps present on the PR's source branch
+                - git:
+                    repoURL: https://dev.azure.com/programmingwithwolfgang/Youtube/_git/Team-a
+                    revision: '{{ .branch }}'
+                    directories:
+                      - path: apps/*
+
+          # Only the dev cluster has a cluster secret with env=dev; test/prod generate nothing
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+                  env: dev
+
+  template:
+    metadata:
+      name: 'team-a-{{ .path.basename }}-pr{{ .number }}'
+      labels:
+        preview: 'true'
+        team: team-a
+        pr: '{{ .number }}'
+      annotations:
+        pr-title: '{{ .title }}'
+        pr-branch: '{{ .branch }}'
+    spec:
+      project: team-a
+      source:
+        repoURL: https://dev.azure.com/programmingwithwolfgang/Youtube/_git/Team-a
+        # Pin to the commit so the preview tracks the PR head exactly
+        targetRevision: '{{ .head_sha }}'
+        path: '{{ .path.path }}'
+        helm:
+          valueFiles:
+            - dev/values.yaml
+      destination:
+        server: '{{ .server }}'
+        namespace: 'team-a-pr{{ .number }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # Preview namespaces are created on demand; AppProject whitelists Namespace for this
+          - CreateNamespace=true

@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-apps
+  namespace: argocd
+spec:
+  generators:
+    # Outer generator: the local cluster secret carries the env label (dev/test/prod),
+    # so the same manifest works on every per-environment cluster
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+
+          # Inner generator: teams x apps discovered in each team's repo
+          - matrix:
+              generators:
+                # Platform team edits this list to onboard a new team
+                - list:
+                    elements:
+                      - team: team-a
+                        repoURL: https://dev.azure.com/programmingwithwolfgang/Youtube/_git/Team-a
+
+                # Auto-discovers new apps; repoURL comes from the team list above
+                - git:
+                    repoURL: '{{repoURL}}'
+                    revision: main
+                    directories:
+                      - path: apps/*
+
+  template:
+    metadata:
+      name: '{{team}}-{{path.basename}}-{{metadata.labels.env}}'
+    spec:
+      project: '{{team}}'
+      source:
+        # Chart lives in the team repo under apps/<app>; env overrides in apps/<app>/<env>/values.yaml
+        repoURL: '{{repoURL}}'
+        targetRevision: main
+        path: '{{path}}'
+        helm:
+          valueFiles:
+            - '{{metadata.labels.env}}/values.yaml'
+      destination:
+        server: '{{server}}'
+        namespace: '{{team}}-{{metadata.labels.env}}'
+      # Namespace is created during onboarding; AppProject forbids cluster-scoped resources
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

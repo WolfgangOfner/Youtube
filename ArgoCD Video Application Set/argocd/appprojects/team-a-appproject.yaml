@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-a
+  namespace: argocd
+spec:
+  description: Project for Team A workloads
+
+  sourceRepos:
+    - https://dev.azure.com/programmingwithwolfgang/Youtube/_git/Team-a
+
+  # Only the team's own namespaces on the platform cluster
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: 'team-a-*'
+
+  # Only Namespace is allowed cluster-wide, and only names matching the destinations above (PR previews)
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange
+    - group: rbac.authorization.k8s.io
+      kind: '*'

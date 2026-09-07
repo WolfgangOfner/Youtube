@@ -1,0 +1,14 @@
+# Registers the local cluster with Argo CD; the env label drives the ApplicationSet.
+# Each per-environment cluster applies this with its own env value (dev/test/prod).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: in-cluster
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    env: dev
+type: Opaque
+stringData:
+  name: in-cluster
+  server: https://kubernetes.default.svc
